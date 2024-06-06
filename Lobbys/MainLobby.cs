@@ -15,7 +15,8 @@ namespace SimpleNet.Lobbys
         {
             FindLobby,
             CreateLobby,
-            CloseLobby
+            CloseLobby,
+            GetIP
         }
         enum CallBackType : sbyte
         {
@@ -25,6 +26,8 @@ namespace SimpleNet.Lobbys
             CreateLobby_Fail,
             CloseLobby_Success,
             CloseLobby_Fail,
+            GetIP_Success,
+            GetIP_Fail
         }
         protected override void HandleMemory(MemoryStream memory, SNSocket socket)
         {
@@ -183,7 +186,21 @@ namespace SimpleNet.Lobbys
                         }
                         break;
                     }
+                case MessageType.GetIP:
+                    {
+                        if(Program.LocalIP is not null)
+                        {
+                            writer.Write((sbyte)CallBackType.GetIP_Success);
+                            writer.Write(Program.LocalIP);
+                        }
+                        else
+                        {
+                            writer.Write((sbyte)CallBackType.GetIP_Fail);
+                        }
+                        break;
+                    }
             }
+            socket.AsyncSend(reply.ToArray());
         }
         public static async void Send_FindLobby(string uniqueLabel, SNSocket serverSocket, Action<int?, int?, string?, string?> callback)
         {
@@ -286,7 +303,7 @@ namespace SimpleNet.Lobbys
                 }
             }
         }
-        public static async void Send_CreateLobby(string uniqueLabel, SNSocket serverSocket, Action<bool?> callback)
+        public static async void Send_CloseLobby(string uniqueLabel, SNSocket serverSocket, Action<bool?> callback)
         {
             using (MemoryStream stream1 = new())
             {
@@ -314,6 +331,37 @@ namespace SimpleNet.Lobbys
                     else
                     {
                         callback(false);
+                    }
+                }
+            }
+        }
+        public static async void Send_CloseLobby(string uniqueLabel, SNSocket serverSocket, Action<string?> callback)
+        {
+            using (MemoryStream stream1 = new())
+            {
+                using (BinaryWriter writer = new(stream1))
+                {
+                    writer.Write((sbyte)MessageType.GetIP);
+                    serverSocket.AsyncSend(stream1.ToArray());
+                }
+            }
+            Tuple<byte[]?, object?> result = await serverSocket.AsyncRecive();
+            if (result.Item1 == null)
+            {
+                return;
+            }
+            using (MemoryStream stream2 = new(result.Item1))
+            {
+                using (BinaryReader reader = new(stream2))
+                {
+                    CallBackType callBackType = (CallBackType)reader.ReadSByte();
+                    if (callBackType == CallBackType.GetIP_Success)
+                    {
+                        callback(reader.ReadString());
+                    }
+                    else
+                    {
+                        callback(null);
                     }
                 }
             }

@@ -29,18 +29,15 @@ namespace SimpleNet.Lobbys
             listenToken = new CancellationToken();
             if (ipv4Port != null)
             {
-                IPV4Port = ipv4Port;
-                Task.Factory.StartNew(ListenIPV4, IPV4Port, listenToken, TaskCreationOptions.LongRunning, TaskScheduler.Default);
+                Task.Factory.StartNew(ListenIPV4, ipv4Port.Value, listenToken, TaskCreationOptions.LongRunning, TaskScheduler.Default);
             }
             if (ipv6Port != null)
             {
-                IPV6Port = ipv6Port;
-                Task.Factory.StartNew(ListenIPV6, IPV6Port, listenToken, TaskCreationOptions.LongRunning, TaskScheduler.Default);
+                Task.Factory.StartNew(ListenIPV6, ipv6Port.Value, listenToken, TaskCreationOptions.LongRunning, TaskScheduler.Default);
             }
             if (localPipeName != null)
             {
-                LocalPipeName = localPipeName;
-                Task.Factory.StartNew(ListenLocal, LocalPipeName, listenToken, TaskCreationOptions.LongRunning, TaskScheduler.Default);
+                Task.Factory.StartNew(ListenLocal, localPipeName, listenToken, TaskCreationOptions.LongRunning, TaskScheduler.Default);
             }
         }
         public virtual void StopListen()
@@ -55,6 +52,7 @@ namespace SimpleNet.Lobbys
             }
             TcpListener listener = new(IPAddress.Any, port);
             listener.Start();
+            IPV4Port = ((IPEndPoint)listener.LocalEndpoint).Port;
 #if DEBUG
             Console.WriteLine($"IPV4 Listen[Port:{port}] Start");
 #endif
@@ -80,6 +78,7 @@ namespace SimpleNet.Lobbys
             }
             TcpListener listener = new(IPAddress.IPv6Any, port);
             listener.Start();
+            IPV6Port = ((IPEndPoint)listener.LocalEndpoint).Port;
 #if DEBUG
             Console.WriteLine($"IPV6 Listen[Port:{port}] Start");
 #endif
@@ -106,6 +105,7 @@ namespace SimpleNet.Lobbys
 #if DEBUG
             Console.WriteLine($"Local Listen[Name:{localPipeName}] Start");
 #endif
+            LocalPipeName= localPipeName;
             try
             {
                 while (true)

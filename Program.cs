@@ -1,5 +1,6 @@
 ﻿
 using Microsoft.Win32;
+using Newtonsoft.Json;
 using SimpleNet.DataStructures;
 using SimpleNet.Lobbys;
 using System.Diagnostics;
@@ -13,6 +14,7 @@ namespace SimpleNet
         static int? _ipv4Port;
         static int? _ipv6Port;
         static string? _localSeverName;
+        internal static string? LocalIP;
         static void Main(string[] args)
         {
             var processes = Process.GetProcessesByName("SimpleNet");
@@ -32,11 +34,27 @@ namespace SimpleNet
                 Console.WriteLine(fail);
                 return;
             }
+            GetIP();
             MainLobby mainLobby = new MainLobby();
             mainLobby.StartListen(_ipv4Port, _ipv6Port, _localSeverName);
             while(true)
             {
                 Thread.Sleep(30000);
+            }
+        }
+        private static async void GetIP()
+        {
+            try
+            {
+                var ipApiClient = new HttpClient();
+                var ipApiUrl = "http://ip-api.com/json/";
+                var response = await ipApiClient.GetStringAsync(ipApiUrl);
+                var jsonResponse = JsonConvert.DeserializeObject<dynamic>(response);
+                LocalIP = jsonResponse.query;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("获取公网IP地址时发生异常：" + ex.Message);
             }
         }
         private static bool ReadSettings(ref string failReason)

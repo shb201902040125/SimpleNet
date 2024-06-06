@@ -41,6 +41,15 @@ namespace SimpleNet.Lobbys
                 failReason = null;
                 switch (lobbyType)
                 {
+                    case "normal":
+                        {
+                            if (NormalLobby.TryCreate(paramters ?? [], out NormalLobby? nomalLobby, out failReason))
+                            {
+                                lobby = nomalLobby;
+                                return true;
+                            }
+                            return false;
+                        }
                     default:
                         {
                             failReason = "Invalid lobby type";
