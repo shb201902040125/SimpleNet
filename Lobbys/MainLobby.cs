@@ -335,7 +335,7 @@ namespace SimpleNet.Lobbys
                 }
             }
         }
-        public static async void Send_CloseLobby(string uniqueLabel, SNSocket serverSocket, Action<string?> callback)
+        public static async void Send_GetIP(SNSocket serverSocket, Action<string?> callback)
         {
             using (MemoryStream stream1 = new())
             {

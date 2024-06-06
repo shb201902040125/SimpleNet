@@ -8,6 +8,7 @@ namespace SimpleNet.RemoteAddress
         internal readonly IPAddress _address;
         internal readonly int _port;
         public IPAddress IPAddress => new(_address.GetAddressBytes());
+        public int Port => _port;
         public TCPAddress(IPAddress address, int port)
         {
             Type = address.AddressFamily == AddressFamily.InterNetwork
