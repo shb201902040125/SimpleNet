@@ -50,11 +50,20 @@ namespace SimpleNet
                 var ipApiUrl = "http://ip-api.com/json/";
                 var response = await ipApiClient.GetStringAsync(ipApiUrl);
                 var jsonResponse = JsonConvert.DeserializeObject<dynamic>(response);
+                if(jsonResponse is null)
+                {
+                    Console.WriteLine("Unable to connect to the Internet");
+                    Environment.Exit(1);
+                }
                 LocalIP = jsonResponse.query;
+#if DEBUG
+                Console.WriteLine(LocalIP);
+#endif
             }
             catch (Exception ex)
             {
-                Console.WriteLine("获取公网IP地址时发生异常：" + ex.Message);
+                Console.WriteLine("An exception occurs when obtaining the public IP address.\n" + ex.Message);
+                Environment.Exit(1);
             }
         }
         private static bool ReadSettings(ref string failReason)

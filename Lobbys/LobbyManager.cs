@@ -39,6 +39,20 @@ namespace SimpleNet.Lobbys
             {
                 lobby = null;
                 failReason = null;
+                if (_lobbys.TryGetValue(uniqueLbale, out lobby))
+                {
+                    switch (lobbyType)
+                    {
+                        case "normal":
+                            {
+                                if (lobby is NormalLobby)
+                                {
+                                    return true;
+                                }
+                                break;
+                            }
+                    }
+                }
                 switch (lobbyType)
                 {
                     case "normal":
@@ -46,6 +60,7 @@ namespace SimpleNet.Lobbys
                             if (NormalLobby.TryCreate(paramters ?? [], out NormalLobby? nomalLobby, out failReason))
                             {
                                 lobby = nomalLobby;
+                                _lobbys[uniqueLbale] = lobby;
                                 return true;
                             }
                             return false;

@@ -201,6 +201,9 @@ namespace SimpleNet.Lobbys
                     }
             }
             socket.AsyncSend(reply.ToArray());
+#if DEBUG
+            Console.WriteLine("Replyed");
+#endif
         }
         public static async void Send_FindLobby(string uniqueLabel, SNSocket serverSocket, Action<int?, int?, string?, string?> callback)
         {
@@ -211,11 +214,17 @@ namespace SimpleNet.Lobbys
                     writer.Write((sbyte)MessageType.FindLobby);
                     writer.Write(uniqueLabel);
                     serverSocket.AsyncSend(stream1.ToArray());
+#if DEBUG
+                    Console.WriteLine($"Send_FindLobby:{uniqueLabel}");
+#endif
                 }
             }
             Tuple<byte[]?, object?> result = await serverSocket.AsyncRecive();
             if (result.Item1 == null)
             {
+#if DEBUG
+                Console.WriteLine($"Error Reply:{uniqueLabel}");
+#endif
                 return;
             }
             using (MemoryStream stream2 = new(result.Item1))
@@ -225,6 +234,9 @@ namespace SimpleNet.Lobbys
                     CallBackType callBackType = (CallBackType)reader.ReadSByte();
                     if (callBackType == CallBackType.FindLobby_Success)
                     {
+#if DEBUG
+                        Console.WriteLine($"FindLobby_Success:{uniqueLabel}");
+#endif
                         switch (serverSocket.RemoteAddress.Type)
                         {
                             case RemoteAddress.SNRemoteAddress.AddressType.IPV4:
@@ -246,6 +258,9 @@ namespace SimpleNet.Lobbys
                     }
                     else
                     {
+#if DEBUG
+                        Console.WriteLine($"FindLobby_Fail:{uniqueLabel}");
+#endif
                         callback(null, null, null, reader.ReadString());
                     }
                 }
@@ -263,11 +278,17 @@ namespace SimpleNet.Lobbys
                     string jsonParamters = JsonSerializer.Serialize(paramters ?? []);
                     writer.Write(jsonParamters);
                     serverSocket.AsyncSend(stream1.ToArray());
+#if DEBUG
+                    Console.WriteLine($"Send_CreateLobby:{uniqueLabel}-{lobbytype}-{(paramters is null?"HasParamters": "NoParamters")}");
+#endif
                 }
             }
             Tuple<byte[]?, object?> result = await serverSocket.AsyncRecive();
             if (result.Item1 == null)
             {
+#if DEBUG
+                Console.WriteLine($"ErrorReply:{uniqueLabel}");
+#endif
                 return;
             }
             using (MemoryStream stream2 = new(result.Item1))
@@ -277,6 +298,9 @@ namespace SimpleNet.Lobbys
                     CallBackType callBackType = (CallBackType)reader.ReadSByte();
                     if (callBackType == CallBackType.CreateLobby_Success)
                     {
+#if DEBUG
+                        Console.WriteLine($"CreateLobby_Fail:{uniqueLabel}");
+#endif
                         switch (serverSocket.RemoteAddress.Type)
                         {
                             case RemoteAddress.SNRemoteAddress.AddressType.IPV4:
@@ -298,6 +322,9 @@ namespace SimpleNet.Lobbys
                     }
                     else
                     {
+#if DEBUG
+                        Console.WriteLine($"CreateLobby_Fail:{uniqueLabel}");
+#endif
                         callback(null, null, null, reader.ReadString());
                     }
                 }
