@@ -11,14 +11,14 @@ namespace SimpleNet.Lobbys
 {
     public class MainLobby : Lobby
     {
-        enum MessageType : sbyte
+        public enum MessageType : sbyte
         {
             FindLobby,
             CreateLobby,
             CloseLobby,
             GetIP
         }
-        enum CallBackType : sbyte
+        public enum CallBackType : sbyte
         {
             FindLobby_Success,
             FindLobby_Fail,
@@ -34,6 +34,11 @@ namespace SimpleNet.Lobbys
             using BinaryReader reader = new(memory);
             using MemoryStream reply = new();
             using BinaryWriter writer = new(reply);
+            string dialogueLabel = reader.ReadString();
+#if DEBUG
+            Console.WriteLine(dialogueLabel);
+#endif
+            writer.Write(dialogueLabel);
             sbyte messageType = reader.ReadSByte();
             switch ((MessageType)messageType)
             {
@@ -105,9 +110,9 @@ namespace SimpleNet.Lobbys
                         Dictionary<string, string>? paramters = JsonSerializer.Deserialize<Dictionary<string, string>>(reader.ReadString());
 #if DEBUG
                         string output = $"Request Create Lobby With:{uniqueLabel}_{lobbyType}";
-                        if(paramters != null)
+                        if (paramters != null)
                         {
-                            foreach(var pair in paramters)
+                            foreach (var pair in paramters)
                             {
                                 output += $"\n{pair.Key}:{pair.Value}";
                             }
@@ -188,7 +193,7 @@ namespace SimpleNet.Lobbys
                     }
                 case MessageType.GetIP:
                     {
-                        if(Program.LocalIP is not null)
+                        if (Program.LocalIP is not null)
                         {
                             writer.Write((sbyte)CallBackType.GetIP_Success);
                             writer.Write(Program.LocalIP);
@@ -205,12 +210,14 @@ namespace SimpleNet.Lobbys
             Console.WriteLine("Replyed");
 #endif
         }
-        public static async void Send_FindLobby(string uniqueLabel, SNSocket serverSocket, Action<int?, int?, string?, string?> callback)
+        public static async void Send_FindLobby(string? dialogueLabel, string uniqueLabel, SNSocket serverSocket, Action<int?, int?, string?, string?, byte[]?> callback)
         {
+            dialogueLabel ??= "FindLobby";
             using (MemoryStream stream1 = new())
             {
                 using (BinaryWriter writer = new(stream1))
                 {
+                    writer.Write(dialogueLabel);
                     writer.Write((sbyte)MessageType.FindLobby);
                     writer.Write(uniqueLabel);
                     serverSocket.AsyncSend(stream1.ToArray());
@@ -231,6 +238,11 @@ namespace SimpleNet.Lobbys
             {
                 using (BinaryReader reader = new(stream2))
                 {
+                    if (reader.ReadString() != dialogueLabel)
+                    {
+                        callback(null, null, null, null, result.Item1);
+                        return;
+                    }
                     CallBackType callBackType = (CallBackType)reader.ReadSByte();
                     if (callBackType == CallBackType.FindLobby_Success)
                     {
@@ -241,17 +253,17 @@ namespace SimpleNet.Lobbys
                         {
                             case RemoteAddress.SNRemoteAddress.AddressType.IPV4:
                                 {
-                                    callback(reader.ReadInt32(), null, null, null);
+                                    callback(reader.ReadInt32(), null, null, null, null);
                                     break;
                                 }
                             case RemoteAddress.SNRemoteAddress.AddressType.IPV6:
                                 {
-                                    callback(null, reader.ReadInt32(), null, null);
+                                    callback(null, reader.ReadInt32(), null, null, null);
                                     break;
                                 }
                             case RemoteAddress.SNRemoteAddress.AddressType.NamedPipeStream:
                                 {
-                                    callback(null, null, reader.ReadString(), null);
+                                    callback(null, null, reader.ReadString(), null, null);
                                     break;
                                 }
                         }
@@ -261,17 +273,19 @@ namespace SimpleNet.Lobbys
 #if DEBUG
                         Console.WriteLine($"FindLobby_Fail:{uniqueLabel}");
 #endif
-                        callback(null, null, null, reader.ReadString());
+                        callback(null, null, null, reader.ReadString(), null);
                     }
                 }
             }
         }
-        public static async void Send_CreateLobby(string uniqueLabel, string lobbytype, Dictionary<string, string>? paramters, SNSocket serverSocket, Action<int?, int?, string?, string?> callback)
+        public static async void Send_CreateLobby(string? dialogueLabel, string uniqueLabel, string lobbytype, Dictionary<string, string>? paramters, SNSocket serverSocket, Action<int?, int?, string?, string?, byte[]?> callback)
         {
+            dialogueLabel ??= "CreateLobby";
             using (MemoryStream stream1 = new())
             {
                 using (BinaryWriter writer = new(stream1))
                 {
+                    writer.Write(dialogueLabel);
                     writer.Write((sbyte)MessageType.CreateLobby);
                     writer.Write(uniqueLabel);
                     writer.Write(lobbytype);
@@ -279,7 +293,7 @@ namespace SimpleNet.Lobbys
                     writer.Write(jsonParamters);
                     serverSocket.AsyncSend(stream1.ToArray());
 #if DEBUG
-                    Console.WriteLine($"Send_CreateLobby:{uniqueLabel}-{lobbytype}-{(paramters is null?"HasParamters": "NoParamters")}");
+                    Console.WriteLine($"Send_CreateLobby:{uniqueLabel}-{lobbytype}-{(paramters is null ? "HasParamters" : "NoParamters")}");
 #endif
                 }
             }
@@ -295,6 +309,11 @@ namespace SimpleNet.Lobbys
             {
                 using (BinaryReader reader = new(stream2))
                 {
+                    if (reader.ReadString() != dialogueLabel)
+                    {
+                        callback(null, null, null, null, result.Item1);
+                        return;
+                    }
                     CallBackType callBackType = (CallBackType)reader.ReadSByte();
                     if (callBackType == CallBackType.CreateLobby_Success)
                     {
@@ -305,17 +324,17 @@ namespace SimpleNet.Lobbys
                         {
                             case RemoteAddress.SNRemoteAddress.AddressType.IPV4:
                                 {
-                                    callback(reader.ReadInt32(), null, null, null);
+                                    callback(reader.ReadInt32(), null, null, null, null);
                                     break;
                                 }
                             case RemoteAddress.SNRemoteAddress.AddressType.IPV6:
                                 {
-                                    callback(null, reader.ReadInt32(), null, null);
+                                    callback(null, reader.ReadInt32(), null, null, null);
                                     break;
                                 }
                             case RemoteAddress.SNRemoteAddress.AddressType.NamedPipeStream:
                                 {
-                                    callback(null, null, reader.ReadString(), null);
+                                    callback(null, null, reader.ReadString(), null, null);
                                     break;
                                 }
                         }
@@ -325,17 +344,19 @@ namespace SimpleNet.Lobbys
 #if DEBUG
                         Console.WriteLine($"CreateLobby_Fail:{uniqueLabel}");
 #endif
-                        callback(null, null, null, reader.ReadString());
+                        callback(null, null, null, reader.ReadString(), null);
                     }
                 }
             }
         }
-        public static async void Send_CloseLobby(string uniqueLabel, SNSocket serverSocket, Action<bool?> callback)
+        public static async void Send_CloseLobby(string? dialogueLabel, string uniqueLabel, SNSocket serverSocket, Action<bool?, byte[]?> callback)
         {
+            dialogueLabel ??= "CloseLobby";
             using (MemoryStream stream1 = new())
             {
                 using (BinaryWriter writer = new(stream1))
                 {
+                    writer.Write(dialogueLabel);
                     writer.Write((sbyte)MessageType.CloseLobby);
                     writer.Write(uniqueLabel);
                     serverSocket.AsyncSend(stream1.ToArray());
@@ -350,24 +371,31 @@ namespace SimpleNet.Lobbys
             {
                 using (BinaryReader reader = new(stream2))
                 {
+                    if (reader.ReadString() != dialogueLabel)
+                    {
+                        callback(null, result.Item1);
+                        return;
+                    }
                     CallBackType callBackType = (CallBackType)reader.ReadSByte();
                     if (callBackType == CallBackType.CloseLobby_Success)
                     {
-                        callback(true);
+                        callback(true, null);
                     }
                     else
                     {
-                        callback(false);
+                        callback(false, null);
                     }
                 }
             }
         }
-        public static async void Send_GetIP(SNSocket serverSocket, Action<string?> callback)
+        public static async void Send_GetIP(string? dialogueLabel, SNSocket serverSocket, Action<string?, byte[]?> callback)
         {
+            dialogueLabel ??= "GetIP";
             using (MemoryStream stream1 = new())
             {
                 using (BinaryWriter writer = new(stream1))
                 {
+                    writer.Write(dialogueLabel);
                     writer.Write((sbyte)MessageType.GetIP);
                     serverSocket.AsyncSend(stream1.ToArray());
                 }
@@ -381,14 +409,19 @@ namespace SimpleNet.Lobbys
             {
                 using (BinaryReader reader = new(stream2))
                 {
+                    if (reader.ReadString() != dialogueLabel)
+                    {
+                        callback(null, result.Item1);
+                        return;
+                    }
                     CallBackType callBackType = (CallBackType)reader.ReadSByte();
                     if (callBackType == CallBackType.GetIP_Success)
                     {
-                        callback(reader.ReadString());
+                        callback(reader.ReadString(), null);
                     }
                     else
                     {
-                        callback(null);
+                        callback(null, null);
                     }
                 }
             }

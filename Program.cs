@@ -4,6 +4,7 @@ using Newtonsoft.Json;
 using SimpleNet.DataStructures;
 using SimpleNet.Lobbys;
 using System.Diagnostics;
+using System.Net;
 using System.Reflection;
 
 namespace SimpleNet
@@ -44,27 +45,20 @@ namespace SimpleNet
         }
         private static async void GetIP()
         {
-            try
+            Dns.BeginGetHostAddresses(Dns.GetHostName(), ar =>
             {
-                var ipApiClient = new HttpClient();
-                var ipApiUrl = "http://ip-api.com/json/";
-                var response = await ipApiClient.GetStringAsync(ipApiUrl);
-                var jsonResponse = JsonConvert.DeserializeObject<dynamic>(response);
-                if(jsonResponse is null)
+                IPAddress[] array = Dns.EndGetHostAddresses(ar);
+                for (int i = 0; i < array.Length; i++)
                 {
-                    Console.WriteLine("Unable to connect to the Internet");
-                    Environment.Exit(1);
+                    if (array[i].AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
+                    {
+                        LocalIP = array[i].ToString();
+                        Console.WriteLine(LocalIP);
+                        return;
+                    }
                 }
-                LocalIP = jsonResponse.query;
-#if DEBUG
-                Console.WriteLine(LocalIP);
-#endif
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("An exception occurs when obtaining the public IP address.\n" + ex.Message);
-                Environment.Exit(1);
-            }
+                Console.WriteLine("Fail Find Local IP");
+            }, null);
         }
         private static bool ReadSettings(ref string failReason)
         {

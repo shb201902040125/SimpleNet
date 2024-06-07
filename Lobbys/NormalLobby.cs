@@ -13,13 +13,13 @@ namespace SimpleNet.Lobbys
 {
     public class NormalLobby : Lobby
     {
-        enum MessageType:sbyte
+        public enum MessageType : sbyte
         {
             GetIP,
             BroadCast,
             ToIP
         }
-        enum CallBackType:sbyte
+        public enum CallBackType : sbyte
         {
             GetIP_Success,
             GetIP_Fail,
@@ -40,6 +40,11 @@ namespace SimpleNet.Lobbys
             using BinaryReader reader = new(memory);
             using MemoryStream reply = new();
             using BinaryWriter writer = new(reply);
+            string dialogueLabel = reader.ReadString();
+#if DEBUG
+            Console.WriteLine(dialogueLabel);
+#endif
+            writer.Write(dialogueLabel);
             sbyte messageType = reader.ReadSByte();
             switch ((MessageType)messageType)
             {
@@ -94,22 +99,21 @@ namespace SimpleNet.Lobbys
                         foreach (string ip in ips)
                         {
                             var target = _acceptedSockets.Find(socket => socket.IsConnected && socket.ToString() == ip);
-                            if (target != null)
-                            {
-                                target.AsyncSend(reply.ToArray());
-                            }
+                            target?.AsyncSend(reply.ToArray());
                         }
                         return;
                     }
             }
             socket.AsyncSend(reply.ToArray());
         }
-        public static async void Send_GetIP(SNSocket serverSocket, Action<string?> callback)
+        public static async void Send_GetIP(string? dialogueLabel, SNSocket serverSocket, Action<string?, byte[]?> callback)
         {
+            dialogueLabel ??= "GetIP";
             using (MemoryStream stream1 = new())
             {
                 using (BinaryWriter writer = new(stream1))
                 {
+                    writer.Write(dialogueLabel);
                     writer.Write((sbyte)MessageType.GetIP);
                     serverSocket.AsyncSend(stream1.ToArray());
                 }
@@ -123,16 +127,90 @@ namespace SimpleNet.Lobbys
             {
                 using (BinaryReader reader = new(stream2))
                 {
+                    if (reader.ReadString() != dialogueLabel)
+                    {
+                        callback(null, result.Item1);
+                        return;
+                    }
                     CallBackType callBackType = (CallBackType)reader.ReadSByte();
                     if (callBackType == CallBackType.GetIP_Success)
                     {
-                        callback(reader.ReadString());
+                        callback(reader.ReadString(), null);
                     }
                     else
                     {
-                        callback(null);
+                        callback(null, null);
                     }
                 }
+            }
+        }
+        public static void Send_BroadCast(string? dialogueLabel, SNSocket serverSocket, byte[] data)
+        {
+            dialogueLabel ??= "BroadCast";
+            using (MemoryStream stream1 = new())
+            {
+                using (BinaryWriter writer = new(stream1))
+                {
+                    writer.Write(dialogueLabel);
+                    writer.Write((sbyte)MessageType.BroadCast);
+                    writer.Write(data);
+                    serverSocket.AsyncSend(stream1.ToArray());
+                }
+            }
+        }
+        public static void Send_ToIP(string? dialogueLabel, SNSocket serverSocket, string[] ips, byte[] data)
+        {
+            dialogueLabel ??= "ToIP";
+            using (MemoryStream stream1 = new())
+            {
+                using (BinaryWriter writer = new(stream1))
+                {
+                    writer.Write(dialogueLabel);
+                    writer.Write((sbyte)MessageType.ToIP);
+                    List<string> collection = [];
+                    foreach (string ip in ips)
+                    {
+                        if (IPEndPoint.TryParse(ip, out _))
+                        {
+                            collection.Add(ip);
+                        }
+                    }
+                    writer.Write(string.Join(" ", collection));
+                    writer.Write(data);
+                    serverSocket.AsyncSend(stream1.ToArray());
+                }
+            }
+        }
+        public static bool IsCallbackType(byte[] origData, CallBackType callBackType, [NotNullWhen(true)] out byte[]? data)
+        {
+            data = null;
+            try
+            {
+                using (MemoryStream stream = new(origData))
+                {
+                    using (BinaryReader reader = new(stream))
+                    {
+                        _ = reader.ReadString();
+                        if (reader.ReadSByte() != (sbyte)callBackType)
+                        {
+                            return false;
+                        }
+                        data = new byte[stream.Length - stream.Position];
+                        var buffer = ArrayPool<byte>.Shared.Rent(1024);
+                        int read = 0, ptr = 0;
+                        while ((read = reader.Read(buffer)) != 0)
+                        {
+                            Array.Copy(buffer, 0, data, ptr, read);
+                            ptr += read;
+                        }
+                        ArrayPool<byte>.Shared.Return(buffer);
+                        return true;
+                    }
+                }
+            }
+            catch
+            {
+                return false;
             }
         }
     }
