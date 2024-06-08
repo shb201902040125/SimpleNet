@@ -67,6 +67,7 @@ namespace SimpleNet.Lobbys
                 case MessageType.BroadCast:
                     {
                         writer.Write((sbyte)CallBackType.BroadCast);
+                        writer.Write(socket.RemoteAddress.ToString() ?? "Anonymous");
                         var buffer = ArrayPool<byte>.Shared.Rent(1024);
                         int read = 0;
                         while ((read = reader.Read(buffer)) != 0)
