@@ -182,9 +182,14 @@ namespace SimpleNet.Lobbys
                 }
             }
         }
-        public static bool IsCallbackType(byte[] origData, CallBackType callBackType, [NotNullWhen(true)] out byte[]? data)
+        public static bool IsBoradcastOrFromIP(byte[] origData, CallBackType callBackType,[NotNullWhen(true)]out string? from, [NotNullWhen(true)] out byte[]? data)
         {
+            from = null;
             data = null;
+            if (callBackType is not CallBackType.BroadCast or CallBackType.FromIP)
+            {
+                return false;
+            }
             try
             {
                 using (MemoryStream stream = new(origData))
@@ -196,6 +201,7 @@ namespace SimpleNet.Lobbys
                         {
                             return false;
                         }
+                        from = reader.ReadString();
                         data = new byte[stream.Length - stream.Position];
                         var buffer = ArrayPool<byte>.Shared.Rent(1024);
                         int read = 0, ptr = 0;

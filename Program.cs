@@ -129,11 +129,9 @@ namespace SimpleNet
         {
             try
             {
-                string currentPath = Assembly.GetExecutingAssembly().Location;
+                string currentPath = Path.Combine(Environment.CurrentDirectory, "SimpleNet.exe");
                 Directory.CreateDirectory(BaseDir);
-                using FileStream stream = File.OpenWrite(Path.Combine(BaseDir, "StartPath.txt"));
-                using StreamWriter writer = new(stream);
-                writer.Write(currentPath);
+                File.WriteAllText(Path.Combine(BaseDir, "StartPath.txt"), currentPath);
                 return true;
             }
             catch(Exception e)
