@@ -22,17 +22,6 @@ namespace SimpleNet
                 Console.WriteLine("This program is not repeatable");
                 return;
             }
-            if (args.Length == 1)
-            {
-                Dictionary<string, string>? paramters = JsonConvert.DeserializeObject<Dictionary<string, string>>(args[0]);
-                if (paramters != null)
-                {
-                    _ipv4Port = int.Parse(paramters[nameof(_ipv4Port)]);
-                    _ipv6Port = int.Parse(paramters[nameof(_ipv6Port)]);
-                    _localSeverName = paramters[nameof(_localSeverName)];
-                    goto label;
-                }
-            }
             string fail = string.Empty;
             if (!UpdateStartPath(ref fail))
             {
@@ -44,9 +33,8 @@ namespace SimpleNet
                 Console.WriteLine(fail);
                 return;
             }
-        label:;
             GetIP();
-            MainLobby mainLobby = new MainLobby();
+            MainLobby mainLobby = new();
             mainLobby.StartListen(_ipv4Port, _ipv6Port, _localSeverName);
             while(true)
             {
