@@ -205,12 +205,13 @@ namespace SimpleNet.Lobbys
                         break;
                     }
             }
-            socket.AsyncSend(reply.ToArray());
+            using BufferArray<byte> buffer = new(reply.ToArray());
+            socket.AsyncSend(buffer);
 #if DEBUG
             Console.WriteLine("Replyed");
 #endif
         }
-        public static async void Send_FindLobby(string? dialogueLabel, string uniqueLabel, SNSocket serverSocket, Action<int?, int?, string?, string?, byte[]?> callback)
+        public static async void Send_FindLobby(string? dialogueLabel, string uniqueLabel, SNSocket serverSocket, Action<int?, int?, string?, string?, BufferArray<byte>?> callback)
         {
             dialogueLabel ??= "FindLobby";
             using (MemoryStream stream1 = new())
@@ -220,13 +221,14 @@ namespace SimpleNet.Lobbys
                     writer.Write(dialogueLabel);
                     writer.Write((sbyte)MessageType.FindLobby);
                     writer.Write(uniqueLabel);
-                    serverSocket.AsyncSend(stream1.ToArray());
+                    using BufferArray<byte> buffer = new(stream1.ToArray());
+                    serverSocket.AsyncSend(buffer);
 #if DEBUG
                     Console.WriteLine($"Send_FindLobby:{uniqueLabel}");
 #endif
                 }
             }
-            Tuple<byte[]?, object?> result = await serverSocket.AsyncRecive();
+            var result = await serverSocket.AsyncRecive();
             if (result.Item1 == null)
             {
 #if DEBUG
@@ -278,7 +280,7 @@ namespace SimpleNet.Lobbys
                 }
             }
         }
-        public static async void Send_CreateLobby(string? dialogueLabel, string uniqueLabel, string lobbytype, Dictionary<string, string>? paramters, SNSocket serverSocket, Action<int?, int?, string?, string?, byte[]?> callback)
+        public static async void Send_CreateLobby(string? dialogueLabel, string uniqueLabel, string lobbytype, Dictionary<string, string>? paramters, SNSocket serverSocket, Action<int?, int?, string?, string?, BufferArray<byte>?> callback)
         {
             dialogueLabel ??= "CreateLobby";
             using (MemoryStream stream1 = new())
@@ -291,13 +293,14 @@ namespace SimpleNet.Lobbys
                     writer.Write(lobbytype);
                     string jsonParamters = JsonSerializer.Serialize(paramters ?? []);
                     writer.Write(jsonParamters);
-                    serverSocket.AsyncSend(stream1.ToArray());
+                    using BufferArray<byte> buffer=new(stream1.ToArray());
+                    serverSocket.AsyncSend(buffer);
 #if DEBUG
                     Console.WriteLine($"Send_CreateLobby:{uniqueLabel}-{lobbytype}-{(paramters is null ? "HasParamters" : "NoParamters")}");
 #endif
                 }
             }
-            Tuple<byte[]?, object?> result = await serverSocket.AsyncRecive();
+            var result = await serverSocket.AsyncRecive();
             if (result.Item1 == null)
             {
 #if DEBUG
@@ -359,10 +362,11 @@ namespace SimpleNet.Lobbys
                     writer.Write(dialogueLabel);
                     writer.Write((sbyte)MessageType.CloseLobby);
                     writer.Write(uniqueLabel);
-                    serverSocket.AsyncSend(stream1.ToArray());
+                    using BufferArray<byte> buffer = new(stream1.ToArray());
+                    serverSocket.AsyncSend(buffer);
                 }
             }
-            Tuple<byte[]?, object?> result = await serverSocket.AsyncRecive();
+            var result = await serverSocket.AsyncRecive();
             if (result.Item1 == null)
             {
                 return;
@@ -397,10 +401,11 @@ namespace SimpleNet.Lobbys
                 {
                     writer.Write(dialogueLabel);
                     writer.Write((sbyte)MessageType.GetIP);
-                    serverSocket.AsyncSend(stream1.ToArray());
+                    using BufferArray<byte> buffer = new(stream1.ToArray());
+                    serverSocket.AsyncSend(buffer);
                 }
             }
-            Tuple<byte[]?, object?> result = await serverSocket.AsyncRecive();
+            var result = await serverSocket.AsyncRecive();
             if (result.Item1 == null)
             {
                 return;

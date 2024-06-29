@@ -68,20 +68,21 @@ namespace SimpleNet.Lobbys
                     {
                         writer.Write((sbyte)CallBackType.BroadCast);
                         writer.Write(socket.RemoteAddress.ToString() ?? "Anonymous");
-                        var buffer = ArrayPool<byte>.Shared.Rent(1024);
+                        byte[] buffer = ArrayPool<byte>.Shared.Rent(1024);
                         int read = 0;
                         while ((read = reader.Read(buffer)) != 0)
                         {
                             writer.Write(buffer[0..read]);
                         }
                         ArrayPool<byte>.Shared.Return(buffer);
+                        using BufferArray<byte> bufferArray2 = new(reply.ToArray());
                         foreach (var acceptedSocket in _acceptedSockets)
                         {
                             if (acceptedSocket == socket || !acceptedSocket.IsConnected)
                             {
                                 continue;
                             }
-                            acceptedSocket.AsyncSend(reply.ToArray());
+                            acceptedSocket.AsyncSend(bufferArray2);
                         }
                         return;
                     }
@@ -97,17 +98,19 @@ namespace SimpleNet.Lobbys
                             writer.Write(buffer[0..read]);
                         }
                         ArrayPool<byte>.Shared.Return(buffer);
+                        using BufferArray<byte> bufferArray3 = new(reply.ToArray());
                         foreach (string ip in ips)
                         {
                             var target = _acceptedSockets.Find(socket => socket.IsConnected && socket.ToString() == ip);
-                            target?.AsyncSend(reply.ToArray());
+                            target?.AsyncSend(bufferArray3);
                         }
                         return;
                     }
             }
-            socket.AsyncSend(reply.ToArray());
+            using BufferArray<byte> bufferArray = new(reply.ToArray());
+            socket.AsyncSend(bufferArray);
         }
-        public static async void Send_GetIP(string? dialogueLabel, SNSocket serverSocket, Action<string?, byte[]?> callback)
+        public static async void Send_GetIP(string? dialogueLabel, SNSocket serverSocket, Action<string?, BufferArray<byte>?> callback)
         {
             dialogueLabel ??= "GetIP";
             using (MemoryStream stream1 = new())
@@ -116,10 +119,11 @@ namespace SimpleNet.Lobbys
                 {
                     writer.Write(dialogueLabel);
                     writer.Write((sbyte)MessageType.GetIP);
-                    serverSocket.AsyncSend(stream1.ToArray());
+                    using BufferArray<byte> buffer = new(stream1.ToArray());
+                    serverSocket.AsyncSend(buffer);
                 }
             }
-            Tuple<byte[]?, object?> result = await serverSocket.AsyncRecive();
+            var result = await serverSocket.AsyncRecive();
             if (result.Item1 == null)
             {
                 return;
@@ -145,7 +149,7 @@ namespace SimpleNet.Lobbys
                 }
             }
         }
-        public static void Send_BroadCast(string? dialogueLabel, SNSocket serverSocket, byte[] data)
+        public static void Send_BroadCast(string? dialogueLabel, SNSocket serverSocket, BufferArray<byte> data)
         {
             dialogueLabel ??= "BroadCast";
             using (MemoryStream stream1 = new())
@@ -155,11 +159,12 @@ namespace SimpleNet.Lobbys
                     writer.Write(dialogueLabel);
                     writer.Write((sbyte)MessageType.BroadCast);
                     writer.Write(data);
-                    serverSocket.AsyncSend(stream1.ToArray());
+                    using BufferArray<byte> buffer = new(stream1.ToArray());
+                    serverSocket.AsyncSend(buffer);
                 }
             }
         }
-        public static void Send_ToIP(string? dialogueLabel, SNSocket serverSocket, string[] ips, byte[] data)
+        public static void Send_ToIP(string? dialogueLabel, SNSocket serverSocket, string[] ips, BufferArray<byte> data)
         {
             dialogueLabel ??= "ToIP";
             using (MemoryStream stream1 = new())
@@ -178,11 +183,12 @@ namespace SimpleNet.Lobbys
                     }
                     writer.Write(string.Join(" ", collection));
                     writer.Write(data);
-                    serverSocket.AsyncSend(stream1.ToArray());
+                    using BufferArray<byte> buffer = new(stream1.ToArray());
+                    serverSocket.AsyncSend(buffer);
                 }
             }
         }
-        public static bool IsBoradcastOrFromIP(byte[] origData, CallBackType callBackType,[NotNullWhen(true)]out string? from, [NotNullWhen(true)] out byte[]? data)
+        public static bool IsBoradcastOrFromIP(byte[] origData, CallBackType callBackType, [NotNullWhen(true)] out string? from, [NotNullWhen(true)] out BufferArray<byte>? data)
         {
             from = null;
             data = null;
@@ -202,7 +208,7 @@ namespace SimpleNet.Lobbys
                             return false;
                         }
                         from = reader.ReadString();
-                        data = new byte[stream.Length - stream.Position];
+                        data = new(new byte[stream.Length - stream.Position], false);
                         var buffer = ArrayPool<byte>.Shared.Rent(1024);
                         int read = 0, ptr = 0;
                         while ((read = reader.Read(buffer)) != 0)

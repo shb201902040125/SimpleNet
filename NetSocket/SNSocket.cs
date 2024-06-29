@@ -16,8 +16,8 @@ namespace SimpleNet.NetSocket
         public abstract SNRemoteAddress RemoteAddress { get; }
         public abstract bool IsConnected { get; }
         public abstract Task AsyncConnect();
-        public abstract void AsyncSend(byte[] data);
-        public abstract Task<Tuple<byte[]?, object?>> AsyncRecive();
+        public abstract void AsyncSend(BufferArray<byte> data);
+        public abstract Task<Tuple<BufferArray<byte>?, object?>> AsyncRecive();
         public abstract void Close();
     }
     public class TCPSocket : SNSocket
@@ -46,15 +46,16 @@ namespace SimpleNet.NetSocket
             }
             await _connection.ConnectAsync(_address._address, _address._port);
         }
-        public override void AsyncSend(byte[] data)
+        public override void AsyncSend(BufferArray<byte> data)
         {
-            byte[] buffer = ArrayPool<byte>.Shared.Rent(data.Length + 4);
-            int len = data.Length;
+            byte[] _data = data;
+            byte[] buffer = ArrayPool<byte>.Shared.Rent(_data.Length + 4);
+            int len = _data.Length;
             buffer[0] = (byte)(len & 0xFF000000);
             buffer[1] = (byte)(len & 0xFF0000);
             buffer[2] = (byte)(len & 0xFF00);
             buffer[3] = (byte)(len & 0xFF);
-            Buffer.BlockCopy(data, 0, buffer, 4, data.Length);
+            Buffer.BlockCopy(_data, 0, buffer, 4, _data.Length);
             _connection.GetStream().BeginWrite(buffer, 0, buffer.Length,
                 res =>
                 {
@@ -65,13 +66,13 @@ namespace SimpleNet.NetSocket
                     ArrayPool<byte>.Shared.Return(buffer);
                 });
         }
-        public override async Task<Tuple<byte[]?, object?>> AsyncRecive()
+        public override async Task<Tuple<BufferArray<byte>?, object?>> AsyncRecive()
         {
             try
             {
                 if (!IsConnected)
                 {
-                    return Tuple.Create<byte[]?, object?>(null, "Socket Closed");
+                    return Tuple.Create<BufferArray<byte>?, object?>(null, "Socket Closed");
                 }
                 var stream = _connection.GetStream();
                 byte[] array = new byte[4];
@@ -87,11 +88,11 @@ namespace SimpleNet.NetSocket
                     len += read;
                 }
                 ArrayPool<byte>.Shared.Return(buffer);
-                return Tuple.Create<byte[]?, object?>(data, "Safe Arrival");
+                return Tuple.Create<BufferArray<byte>?, object?>(new(data, false), "Safe Arrival");
             }
             catch (Exception ex)
             {
-                return Tuple.Create<byte[]?, object?>(null, ex.ToString());
+                return Tuple.Create<BufferArray<byte>?, object?>(null, ex.ToString());
             }
         }
     }
@@ -114,13 +115,13 @@ namespace SimpleNet.NetSocket
             }
             await _connection.WaitForConnectionAsync();
         }
-        public override async Task<Tuple<byte[]?, object?>> AsyncRecive()
+        public override async Task<Tuple<BufferArray<byte>?, object?>> AsyncRecive()
         {
             try
             {
                 if (!IsConnected)
                 {
-                    return Tuple.Create<byte[]?, object?>(null, "Socket Closed");
+                    return Tuple.Create<BufferArray<byte>?, object?>(null, "Socket Closed");
                 }
                 var stream = _connection;
                 byte[] array = new byte[4];
@@ -136,22 +137,23 @@ namespace SimpleNet.NetSocket
                     len += read;
                 }
                 ArrayPool<byte>.Shared.Return(buffer);
-                return Tuple.Create<byte[]?, object?>(data, "Safe Arrival");
+                return Tuple.Create<BufferArray<byte>?, object?>(new(data, false), "Safe Arrival");
             }
             catch (Exception ex)
             {
-                return Tuple.Create<byte[]?, object?>(null, ex.ToString());
+                return Tuple.Create<BufferArray<byte>?, object?>(null, ex.ToString());
             }
         }
-        public override void AsyncSend(byte[] data)
+        public override void AsyncSend(BufferArray<byte> data)
         {
-            byte[] buffer = ArrayPool<byte>.Shared.Rent(data.Length + 4);
-            int len = data.Length;
+            byte[] _data = data;
+            byte[] buffer = ArrayPool<byte>.Shared.Rent(_data.Length + 4);
+            int len = _data.Length;
             buffer[0] = (byte)(len & 0xFF000000);
             buffer[1] = (byte)(len & 0xFF0000);
             buffer[2] = (byte)(len & 0xFF00);
             buffer[3] = (byte)(len & 0xFF);
-            Buffer.BlockCopy(data, 0, buffer, 4, data.Length);
+            Buffer.BlockCopy(_data, 0, buffer, 4, _data.Length);
             _connection.BeginWrite(buffer, 0, buffer.Length,
                 res =>
                 {
